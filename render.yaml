@@ -2,7 +2,7 @@ services:
   - type: web
     name: time-management-platform
     env: docker
-    dockerFilePath: Dockerfile
+    dockerfilePath: Dockerfile   # ← corrected key (lower‑case “f”)
     plan: free
     region: oregon
     envVars:
