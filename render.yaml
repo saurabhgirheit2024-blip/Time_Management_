@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: time-management-platform
+    env: docker
+    dockerFilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: GEMINI_API_KEY
+        sync: false # Set this in the Render Dashboard to your Google Gemini API Key
