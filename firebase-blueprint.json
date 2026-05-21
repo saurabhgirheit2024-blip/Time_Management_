@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique user ID" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "role": { "type": "string", "enum": ["student", "tech", "general", "admin"], "description": "User's focus area" },
+        "streak": { "type": "integer", "description": "Current daily streak" },
+        "totalMinutes": { "type": "integer", "description": "Total minutes spent learning" },
+        "tasksCompleted": { "type": "integer", "description": "Total tasks completed" },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last activity timestamp" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "displayName", "email", "role", "streak", "totalMinutes", "tasksCompleted", "createdAt"]
+    },
+    "Session": {
+      "title": "Learning Session",
+      "description": "A completed learning session",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID who completed the session" },
+        "title": { "type": "string", "description": "Session title" },
+        "domain": { "type": "string", "enum": ["student", "tech", "general"], "description": "Session domain" },
+        "time": { "type": "integer", "description": "Time spent in minutes" },
+        "score": { "type": "integer", "description": "Score achieved (if applicable)" },
+        "completedAt": { "type": "string", "format": "date-time", "description": "When the session was completed" }
+      },
+      "required": ["uid", "title", "domain", "time", "completedAt"]
+    },
+    "Achievement": {
+      "title": "Achievement",
+      "description": "An unlocked achievement badge",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID who earned the achievement" },
+        "badgeId": { "type": "string", "description": "The unique badge ID" },
+        "unlockedAt": { "type": "string", "format": "date-time", "description": "When the achievement was unlocked" }
+      },
+      "required": ["uid", "badgeId", "unlockedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "User's completed learning sessions"
+    },
+    "/users/{userId}/achievements/{achievementId}": {
+      "schema": "Achievement",
+      "description": "User's unlocked achievements"
+    }
+  }
+}

@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required, immutable) - The unique user ID
+    //   - displayName: string (required, size < 100) - User's full name
+    //   - email: string (required, email format) - User's email address
+    //   - role: string (required, enum: ['student', 'tech', 'general', 'admin']) - User's focus area
+    //   - streak: number (required, >= 0) - Current daily streak
+    //   - totalMinutes: number (required, >= 0) - Total minutes spent learning
+    //   - tasksCompleted: number (required, >= 0) - Total tasks completed
+    //   - lastActive: string (optional, ISO 8601) - Last activity timestamp
+    //   - createdAt: string (required, ISO 8601, immutable) - Account creation timestamp
+    //
+    // Collection: users/{userId}/sessions
+    // Document ID: {sessionId} (Auto-generated)
+    // Fields:
+    //   - uid: string (required, immutable) - User ID who completed the session
+    //   - title: string (required, size < 200) - Session title
+    //   - domain: string (required, enum: ['student', 'tech', 'general']) - Session domain
+    //   - time: number (required, > 0) - Time spent in minutes
+    //   - score: number (optional, 0-100) - Score achieved
+    //   - completedAt: string (required, ISO 8601, immutable) - When the session was completed
+    //
+    // Collection: users/{userId}/achievements
+    // Document ID: {achievementId} (Auto-generated)
+    // Fields:
+    //   - uid: string (required, immutable) - User ID who earned the achievement
+    //   - badgeId: string (required, size < 50) - The unique badge ID
+    //   - unlockedAt: string (required, ISO 8601, immutable) - When the achievement was unlocked
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "saurabhgirhe51@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'displayName', 'email', 'role', 'streak', 'totalMinutes', 'tasksCompleted', 'createdAt']) &&
+             hasOnlyAllowedFields(['uid', 'displayName', 'email', 'role', 'streak', 'totalMinutes', 'tasksCompleted', 'lastActive', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['student', 'tech', 'general', 'admin'] &&
+             data.streak is number && data.streak >= 0 &&
+             data.totalMinutes is number && data.totalMinutes >= 0 &&
+             data.tasksCompleted is number && data.tasksCompleted >= 0 &&
+             isValidDateString(data.createdAt) &&
+             (!('lastActive' in data) || isValidDateString(data.lastActive));
+    }
+
+    function isValidSession(data) {
+      return hasRequiredFields(['uid', 'title', 'domain', 'time', 'completedAt']) &&
+             hasOnlyAllowedFields(['uid', 'title', 'domain', 'time', 'score', 'completedAt']) &&
+             data.uid == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.domain in ['student', 'tech', 'general'] &&
+             data.time is number && data.time > 0 &&
+             (!('score' in data) || (data.score is number && data.score >= 0 && data.score <= 100)) &&
+             isValidDateString(data.completedAt);
+    }
+
+    function isValidAchievement(data) {
+      return hasRequiredFields(['uid', 'badgeId', 'unlockedAt']) &&
+             hasOnlyAllowedFields(['uid', 'badgeId', 'unlockedAt']) &&
+             data.uid == request.auth.uid &&
+             data.badgeId is string && data.badgeId.size() > 0 && data.badgeId.size() < 50 &&
+             isValidDateString(data.unlockedAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      (request.resource.data.role != 'admin' || isAdmin());
+      
+      allow update: if isOwner(userId) && 
+                      isValidUser(request.resource.data) && 
+                      uidNotModified() && 
+                      request.resource.data.createdAt == resource.data.createdAt &&
+                      (request.resource.data.role == resource.data.role || isAdmin());
+      
+      allow delete: if isAdmin();
+
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidSession(request.resource.data);
+        allow update: if false; // Sessions are immutable
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /achievements/{achievementId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidAchievement(request.resource.data);
+        allow update: if false; // Achievements are immutable
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
