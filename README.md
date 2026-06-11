@@ -1,7 +1,6 @@
 # ⏳ Time: A High-Performance 3D Academic & Technical Focus Platform
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" alt="Time Platform Banner" width="100%" style="border-radius: 16px; margin-bottom: 24px;" />
   
   <p align="center">
     <strong>Turn micro free slots into structured learning milestones. A futuristic academic and technical study companion powered by 3D visuals, LLM smart paths, and secure sandbox code compilation.</strong>
@@ -121,4 +120,4 @@ graph TD
 
 Contributions to enhance **Time** are always welcome! Feel free to open a pull request or report issues on the GitHub tracker. 
 
-Developed with ⏳ by [Saurabh Girhe(https://github.com/saurabhgirheit2024-blip).
+Developed with ⏳ by [Saurabh Girhe](https://github.com/saurabhgirheit2024-blip).
